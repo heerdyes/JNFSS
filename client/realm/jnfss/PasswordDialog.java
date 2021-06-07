@@ -34,7 +34,7 @@ public class PasswordDialog extends JDialog {
 	private JPanel p;
 	private JPanel stat;
 	private JTextField msgf;
-	private JLabel pl, _;
+	private JLabel pl, _u;
 	private JPasswordField pf;
 	private JButton sb;
 	private String pwd;
@@ -51,7 +51,7 @@ public class PasswordDialog extends JDialog {
 		p = new JPanel ();
 		pf = new JPasswordField (20);
 		pl = new JLabel ("Password");
-		_ = new JLabel ("");
+		_u = new JLabel ("");
 		sb = new JButton ("Submit");
 		sb.addActionListener(new ActionListener () {
 			public void actionPerformed (ActionEvent ae) {
@@ -61,7 +61,7 @@ public class PasswordDialog extends JDialog {
 		p.setLayout(new GridLayout (2, 2));
 		p.add(pl);
 		p.add(pf);
-		p.add(_);
+		p.add(_u);
 		p.add(sb);
 		// status ui
 		stat.setLayout(new GridLayout(1, 1));

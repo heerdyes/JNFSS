@@ -1,0 +1,1 @@
+javac vortex/jnfss/*.java -Xlint:deprecation

@@ -34,7 +34,7 @@ public class UserIDDialog extends JDialog {
 	private JPanel p;
 	private JPanel stat;
 	private JTextField msgf;
-	private JLabel ul, _;
+	private JLabel ul, _u;
 	private JTextField tf;
 	private JButton sb;
 	private String uid;
@@ -52,7 +52,7 @@ public class UserIDDialog extends JDialog {
 		p = new JPanel ();
 		tf = new JTextField (20);
 		ul = new JLabel ("UserID");
-		_ = new JLabel ("");
+		_u = new JLabel ("");
 		sb = new JButton ("Submit");
 		sb.addActionListener(new ActionListener () {
 			public void actionPerformed (ActionEvent ae) {
@@ -62,7 +62,7 @@ public class UserIDDialog extends JDialog {
 		p.setLayout(new GridLayout (2, 2));
 		p.add(ul);
 		p.add(tf);
-		p.add(_);
+		p.add(_u);
 		p.add(sb);
 		// status ui
 		stat.setLayout(new GridLayout(1, 1));
