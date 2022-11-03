@@ -1,3 +1,3 @@
 @echo OFF
-javadoc -subpackages vortex -d docs
+javadoc -sourcepath src -subpackages vortex.jnfss realm.jnfss.serv -d docs
 pause

@@ -1,4 +1,3 @@
 @echo OFF
-dir
-jar cvfm JNFSS_SERV.jar META-INF/manifest.mf vortex
+jar -cvf jnfss.jar -C bin .
 pause

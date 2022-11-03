@@ -1,2 +1,2 @@
 pwd
-java vortex.jnfss.JNFSServer
+java -cp bin vortex.jnfss.JNFSServer
