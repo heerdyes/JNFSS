@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
-pwd
-java realm.jnfss.ApplicationLauncher
+set -euo pipefail
+IFS=$'\r\n'
+
+java -cp bin realm.jnfss.ApplicationLauncher
