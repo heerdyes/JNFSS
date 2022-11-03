@@ -6,6 +6,7 @@ import java.util.*;
 import static java.lang.System.out;
 
 import javax.swing.tree.*;
+import realm.jnfss.serv.XQ;
 
 /**
   * this is the actual server side script/program
