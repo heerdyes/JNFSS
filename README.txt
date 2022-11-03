@@ -6,7 +6,7 @@ S.No    Unit            File/Folder             What is inside
                                                 ii.     The documentation in html format
                                                 iii.    The batch files to launch the client app
 
-2.      server          folder                  i.      The source code for client side application
+2.      server          folder                  i.      The source code for server side application
                                                 ii.     The documentation in html format
                                                 iii.    The batch files to launch the server
 
