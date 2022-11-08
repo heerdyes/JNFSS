@@ -511,6 +511,199 @@ public class ServerHandler extends TCPServer {
     }
   }
   
+  void syncDownloadFile(String cmd,long sid) {
+    int q1 = cmd.indexOf ('"');
+    int q2 = cmd.indexOf ('"', q1 + 1);
+    String flpath = cmd.substring (q1 + 1, q2);
+    File file = new File (flpath);
+    if (file.exists ())
+    {
+        // send to client, who's currently waiting.
+      System.out.println ("sending file...");
+      
+      try
+      {
+      	//
+        DataOutputStream dos = new DataOutputStream (os);
+        FileInputStream fis = new FileInputStream (file);
+      
+        long total = file.length ();
+        long SZMAX = 419430400;    // 2^24 * 25 (i.e. 25 * 16MB)
+        long SZMIN = 25600;        // 2^10 *25
+        int CSMAX = 67108864;
+        int CSMIN = 1024;
+        int chunkSize = -1;
+
+        if (total < SZMAX && total > SZMIN) {
+          int parts = 25;
+          chunkSize = (int) ((double) total / (double) parts);
+        }
+        else if (total > SZMAX) {
+          chunkSize = CSMAX;
+        }
+        else if (total < SZMIN)
+        {
+          chunkSize = CSMIN;
+        }
+
+        byte[] buffer = new byte[chunkSize];
+        long curr = 0;
+        long currprev = 0;
+        int nb;
+      
+        for (;;) {
+          nb = fis.read (buffer);
+          curr += nb;
+          if (nb == -1) break;
+          dos.write (buffer, 0, (int) (curr - currprev));
+          currprev = curr;
+        }
+        // end of for
+      }
+      catch (Exception e)
+      {
+        System.out.println ("exception:: " + e);
+      }
+
+    }
+    else
+    {
+      System.out.println ("File " + file + " doesn't exist !");
+    }
+  }
+  
+  void syncGetTree(String cmd,long sid) {
+    try
+    {
+      ObjectOutputStream oos = new ObjectOutputStream (os);
+      // extract dirname and dirpath from cmd
+      // now its just this
+      String dir_path = super.snHT.get (sid).getSyncDir ().getCanonicalPath ();
+
+      // check for existence
+      File sync_dir = new File (dir_path);
+      if (sync_dir.exists ())
+      {
+        msg (sync_dir.toString () + " exists.");
+        // below is the code to be tested... uses File system tree_node objects.
+        FSTreeNode root = null;
+        File drive = null;
+        XQ<File> fnq = null;
+        XQ<FSTreeNode> tnq = null;
+    
+        drive = sync_dir;
+        root = new FSTreeNode (drive);
+
+        System.out.println (drive.getCanonicalPath ());
+
+        fnq = new XQ<File> ();
+        tnq = new XQ<FSTreeNode> ();
+
+        fnq.enqueue (drive);
+        tnq.enqueue (root);
+
+        while (!fnq.isEmpty ()) {
+          File fn = fnq.dequeue ();
+          FSTreeNode tn = tnq.dequeue ();
+
+          for (File i : fn.listFiles ()) {
+            FSTreeNode dmtn = new FSTreeNode (i);
+            tn.add (dmtn);
+
+            if (i.isDirectory ()) {
+              fnq.enqueue (i);
+              tnq.enqueue (dmtn);
+            }
+          }
+          // for ends
+        }
+        // the hierarchy lies in 'root'
+        System.out.println (" ... in doSyncResponse (), just before writing object...");
+        oos.writeObject (new DefaultTreeModel (root));
+        // report status
+        msg ("SUCCESS: wrote object...");
+      }
+      else
+      {
+        msg (sync_dir.toString () + " does not exist.");
+        FSTreeNode dmtn = new FSTreeNode (new File ("."));
+        DefaultTreeModel dtm = new DefaultTreeModel (dmtn);
+        oos.writeObject (dtm);
+        // report status
+        msg ("WARNING: wrote dummy object...");
+      }
+    }
+    catch (Exception e)
+    {
+        System.out.println ("exception:: " + e);
+    }
+  }
+  
+  void syncMkdir(String cmd,long sid) {
+    // create dir
+    int q1 = cmd.indexOf ('"');
+    int q2 = cmd.indexOf ('"', q1 + 1);
+    String dirpath = cmd.substring (q1 + 1, q2);
+    File dir = new File (dirpath);
+    boolean s = dir.mkdir ();
+    PrintWriter pw = new PrintWriter (os, true);
+    if (s)
+    {
+      pw.println ("TRUE");
+    }
+    else
+    {
+      pw.println ("FALSE");
+    }
+  }
+  
+  void syncMkfile(String cmd,long sid) {
+    // create file
+    try
+    {
+      int q1 = cmd.indexOf ('"');
+      int q2 = cmd.indexOf ('"', q1 + 1);
+      String filepath = cmd.substring (q1 + 1, q2);
+      File file = new File (filepath);
+      boolean s = file.createNewFile ();
+      PrintWriter pw = new PrintWriter (os, true);
+      if (s)
+      {
+        pw.println ("TRUE");
+      }
+      else
+      {
+        pw.println ("FALSE");
+      }
+    }
+    catch (Exception e)
+    {
+      msg ("exception:: " + e.toString ());
+    }
+  }
+  
+  void syncUpfile(String cmd,long sid) {
+    // say OK to receive file.
+    try
+    {
+      int q1 = cmd.indexOf ('"');
+      int q2 = cmd.indexOf ('"', q1 + 1);
+      int q3 = cmd.indexOf ('"', q2 + 1);
+      int q4 = cmd.indexOf ('"', q3 + 1);
+      String filepath = cmd.substring (q1 + 1, q2);
+      long filesize = Long.parseLong (cmd.substring (q3 + 1, q4));
+      File file = new File (filepath);
+      PrintWriter pw = new PrintWriter (os, true);
+      pw.println ("OK");
+      //
+      receiveFile (file, filesize);
+    }
+    catch (Exception e)
+    {
+      msg ("exception:: " + e.toString ());
+    }
+  }
+  
   /**
    * The Synchronize response. <br />
    * Sends the directory hierarchy of the folder to be synced to the requesting client.
@@ -520,216 +713,23 @@ public class ServerHandler extends TCPServer {
     //
     if (cmd.startsWith ("SYNC DOWNLOAD FILE"))
     {
-        int q1 = cmd.indexOf ('"');
-        int q2 = cmd.indexOf ('"', q1 + 1);
-        String flpath = cmd.substring (q1 + 1, q2);
-        File file = new File (flpath);
-        if (file.exists ())
-        {
-            // send to client, who's currently waiting.
-          System.out.println ("sending file...");
-          
-          try
-          {
-          	//
-            DataOutputStream dos = new DataOutputStream (os);
-            FileInputStream fis = new FileInputStream (file);
-          
-            long total = file.length ();
-            long SZMAX = 419430400;    // 2^24 * 25 (i.e. 25 * 16MB)
-            long SZMIN = 25600;        // 2^10 *25
-            int CSMAX = 67108864;
-            int CSMIN = 1024;
-            int chunkSize = -1;
-
-            if (total < SZMAX && total > SZMIN) {
-              int parts = 25;
-              chunkSize = (int) ((double) total / (double) parts);
-            }
-            else if (total > SZMAX) {
-              chunkSize = CSMAX;
-            }
-            else if (total < SZMIN)
-            {
-              chunkSize = CSMIN;
-            }
-
-            byte[] buffer = new byte[chunkSize];
-            long curr = 0;
-            long currprev = 0;
-            int nb;
-          
-            for (;;) {
-              nb = fis.read (buffer);
-              curr += nb;
-              if (nb == -1) break;
-              dos.write (buffer, 0, (int) (curr - currprev));
-              currprev = curr;
-            }
-            // end of for
-          }
-          catch (Exception e)
-          {
-            System.out.println ("exception:: " + e);
-          }
-
-        }
-        else
-        {
-          System.out.println ("File " + file + " doesn't exist !");
-        }
+      syncDownloadFile(cmd,sid);
     }
     else if (cmd.startsWith ("SYNC GET TREE"))
     {
-      try
-      {
-        ObjectOutputStream oos = new ObjectOutputStream (os);
-        // extract dirname and dirpath from cmd
-        // historical code
-        /*
-        int q1 = cmd.indexOf ('"');
-        int q2 = cmd.indexOf ('"', q1 + 1);
-        int q3 = cmd.indexOf ('"', q2 + 1);
-        int q4 = cmd.indexOf ('"', q3 + 1);
-        String dir_name = cmd.substring (q1 + 1, q2);
-        String dir_path = cmd.substring (q3 + 1, q4);  // dir_path is going to be changed later on.
-        int slash = -2;
-        // check for slashes...
-        if ((slash = dir_path.indexOf ('\\')) != -1)
-        {
-          dir_path = ht.getProperty ("ROOT_FOLDER") + File.separator + dir_path.substring (slash + 1);
-        }
-        else
-        {
-          dir_path = ht.getProperty ("ROOT_FOLDER") + File.separator + dir_name;
-        }
-        */
-
-        // now its just this
-        String dir_path = super.snHT.get (sid).getSyncDir ().getCanonicalPath ();
-
-        // check for existence
-        File sync_dir = new File (dir_path);
-        if (sync_dir.exists ())
-        {
-          msg (sync_dir.toString () + " exists.");
-          // below is the code to be tested... uses File system tree_node objects.
-          FSTreeNode root = null;
-          File drive = null;
-          XQ<File> fnq = null;
-          XQ<FSTreeNode> tnq = null;
-      
-          drive = sync_dir;
-          root = new FSTreeNode (drive);
-
-          System.out.println (drive.getCanonicalPath ());
-  
-          fnq = new XQ<File> ();
-          tnq = new XQ<FSTreeNode> ();
-
-          fnq.enqueue (drive);
-          tnq.enqueue (root);
-
-          while (!fnq.isEmpty ()) {
-            File fn = fnq.dequeue ();
-            FSTreeNode tn = tnq.dequeue ();
-
-            for (File i : fn.listFiles ()) {
-              FSTreeNode dmtn = new FSTreeNode (i);
-              tn.add (dmtn);
-
-              if (i.isDirectory ()) {
-                fnq.enqueue (i);
-                tnq.enqueue (dmtn);
-              }
-            }
-            // for ends
-          }
-          // the hierarchy lies in 'root'
-          System.out.println (" ... in doSyncResponse (), just before writing object...");
-          oos.writeObject (new DefaultTreeModel (root));
-          // report status
-          msg ("SUCCESS: wrote object...");
-        }
-        else
-        {
-          msg (sync_dir.toString () + " does not exist.");
-          FSTreeNode dmtn = new FSTreeNode (new File ("."));
-          DefaultTreeModel dtm = new DefaultTreeModel (dmtn);
-          oos.writeObject (dtm);
-          // report status
-          msg ("WARNING: wrote dummy object...");
-        }
-      }
-      catch (Exception e)
-      {
-          System.out.println ("exception:: " + e);
-      }
+      syncGetTree(cmd,sid);
     }
     else if (cmd.startsWith ("SYNC CREATE DIRECTORY"))
     {
-        // create dir
-        int q1 = cmd.indexOf ('"');
-        int q2 = cmd.indexOf ('"', q1 + 1);
-        String dirpath = cmd.substring (q1 + 1, q2);
-        File dir = new File (dirpath);
-        boolean s = dir.mkdir ();
-        PrintWriter pw = new PrintWriter (os, true);
-        if (s)
-        {
-          pw.println ("TRUE");
-        }
-        else
-        {
-          pw.println ("FALSE");
-        }
+      syncMkdir(cmd,sid);
     }
     else if (cmd.startsWith ("SYNC CREATE FILE"))
     {
-        // create file
-        try
-        {
-          int q1 = cmd.indexOf ('"');
-          int q2 = cmd.indexOf ('"', q1 + 1);
-          String filepath = cmd.substring (q1 + 1, q2);
-          File file = new File (filepath);
-          boolean s = file.createNewFile ();
-          PrintWriter pw = new PrintWriter (os, true);
-          if (s)
-          {
-            pw.println ("TRUE");
-          }
-          else
-          {
-            pw.println ("FALSE");
-          }
-        }
-        catch (Exception e)
-        {
-          msg ("exception:: " + e.toString ());
-        }
+      syncMkfile(cmd,sid);
     }
     else if (cmd.startsWith ("SYNC UPLOAD FILE"))
     {
-        // say OK to receive file.
-        try
-        {
-          int q1 = cmd.indexOf ('"');
-          int q2 = cmd.indexOf ('"', q1 + 1);
-          int q3 = cmd.indexOf ('"', q2 + 1);
-          int q4 = cmd.indexOf ('"', q3 + 1);
-          String filepath = cmd.substring (q1 + 1, q2);
-          long filesize = Long.parseLong (cmd.substring (q3 + 1, q4));
-          File file = new File (filepath);
-          PrintWriter pw = new PrintWriter (os, true);
-          pw.println ("OK");
-          //
-          receiveFile (file, filesize);
-        }
-        catch (Exception e)
-        {
-          msg ("exception:: " + e.toString ());
-        }
+      syncUpfile(cmd,sid);
     }
   }
   
