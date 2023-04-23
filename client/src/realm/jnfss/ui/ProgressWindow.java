@@ -65,6 +65,7 @@ public class ProgressWindow implements WindowListener {
   public void unShow () {
     done = true;
     progressDialog.setVisible (false);
+    progressDialog.dispose();
   }
   
   /**
