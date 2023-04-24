@@ -62,7 +62,7 @@ public class ServerHandler extends TCPServer {
   }
   
   /**
-	* the responder to alll client requests and queries
+	* the responder to all client requests and queries
 	*/
   public void respondToRequest (String request) {
     System.out.println ("  // request: " + request);

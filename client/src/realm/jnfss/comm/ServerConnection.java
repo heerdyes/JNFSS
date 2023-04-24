@@ -64,6 +64,10 @@ public class ServerConnection extends Observable {
       throw ioe;
     }
   }
+  
+  public Socket getSock() {
+    return sock;
+  }
 
   /**
     * Use this method to upload a file to the server.
@@ -202,6 +206,7 @@ public class ServerConnection extends Observable {
     }
     catch (Exception e) {
       System.out.println ("  // " + e);
+      e.printStackTrace();
     }
     finally {
       return res;
