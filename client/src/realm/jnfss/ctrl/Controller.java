@@ -80,7 +80,6 @@ public class Controller implements Observer, PropertyChangeListener {
       DefaultTreeModel dtm = (DefaultTreeModel) viewService.serviceViewRequest ();
       ui.setViewPanel (dtm);
       ui.unfreeze ();
-      //msg ("Root: " + dtm.toString ());
       msg ("Obtained Directory Hierarchy from Server");
     }
     else {
